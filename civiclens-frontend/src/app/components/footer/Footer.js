@@ -42,18 +42,33 @@ export default function Footer() {
                         <h3 className="text-slate-900 font-semibold mb-4">Resources</h3>
                         <ul className="space-y-2 text-sm">
                             <li>
-                                <a href="#" className="hover:text-green-900 transition text-slate-700">
+                                <a
+                                    href="https://github.com/StavanRKhobare/CivicLens#readme"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-green-900 transition text-slate-700"
+                                >
                                     Documentation
                                 </a>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-green-900 transition text-slate-700">
+                                <a
+                                    href="https://github.com/StavanRKhobare/CivicLens#-api-endpoints"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-green-900 transition text-slate-700"
+                                >
                                     API Reference
                                 </a>
                             </li>
                             <li>
-                                <a href="#" className="hover:text-green-900 transition text-slate-700">
-                                    Support
+                                <a
+                                    href="https://github.com/StavanRKhobare/CivicLens"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-green-900 transition text-slate-700"
+                                >
+                                    GitHub Repository
                                 </a>
                             </li>
                         </ul>
