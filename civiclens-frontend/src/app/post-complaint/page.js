@@ -46,26 +46,47 @@ export default function PostComplaintPage() {
         setIsSubmitting(true);
 
         try {
-            // TODO: Backend Integration
-            // const response = await fetch('/api/complaints', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({
-            //         raw_text: formData.description,
-            //         address_text: formData.description, // Extract from description
-            //         city: formData.city,
-            //         submitted_by: authState.username,
-            //         created_at: new Date().toISOString()
-            //     })
-            // });
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/complaints`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    raw_text: formData.description.trim(),
+                    submitted_by: authState.username
+                })
+            });
 
-            // Simulate backend submission
-            setTimeout(() => {
-                setIsSubmitting(false);
-                setSubmitSuccess(true);
-            }, 1500);
+            const data = await response.json();
+
+            if (!response.ok) {
+                // Handle backend validation errors
+                throw new Error(data.error || 'Failed to submit complaint');
+            }
+
+            // Success
+            const toast = (await import('react-hot-toast')).default;
+            toast.success('Complaint submitted successfully! 🎉', {
+                duration: 5000,
+            });
+
+
+            setIsSubmitting(false);
+
+            // Reset form
+            setFormData({ description: '', city: 'Bangalore' });
+            setCharCount(0);
+
+            setSubmitSuccess(true);
         } catch (err) {
-            setError('Failed to submit complaint. Please try again.');
+            const toast = (await import('react-hot-toast')).default;
+            const errorMessage = err.message || 'Failed to submit complaint. Please try again.';
+
+            toast.error(errorMessage, {
+                duration: 6000,
+            });
+
+            setError(errorMessage);
             setIsSubmitting(false);
         }
     };

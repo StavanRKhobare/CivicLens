@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { User, Building2, Users, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-    const { login } = useAuth();
+    const { login, authState } = useAuth();
     const router = useRouter();
     const [userType, setUserType] = useState('');
     const [role, setRole] = useState('');
@@ -15,6 +15,18 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [toast, setToast] = useState({ show: false, message: '', type: '' });
+
+    useEffect(() => {
+        if (authState.isAuthenticated) {
+            if (authState.userType === 'manager') {
+                router.push('/manager/complaints');
+            } else if (authState.userType === 'supervisor') {
+                router.push('/supervisor/complaints');
+            } else {
+                router.push('/complaints');
+            }
+        }
+    }, [authState, router]);
 
     const showToast = (message, type) => {
         setToast({ show: true, message, type });
@@ -42,11 +54,11 @@ export default function LoginPage() {
             showToast('✅ Login successful! Redirecting...', 'success');
             setTimeout(() => {
                 if (role === 'manager') {
-                    router.push('/manager/dashboard');
+                    router.push('/manager/complaints');
                 } else if (role === 'supervisor') {
-                    router.push('/supervisor/dashboard');
+                    router.push('/supervisor/complaints');
                 } else {
-                    router.push('/');
+                    router.push('/complaints');
                 }
             }, 1000);
         }

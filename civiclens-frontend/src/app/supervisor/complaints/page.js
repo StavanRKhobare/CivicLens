@@ -11,9 +11,8 @@ export default function SupervisorComplaintsPage() {
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filters, setFilters] = useState({
-        problemType: '',
         status: '',
-        sort: 'newest'
+        problemType: ''
     });
 
     useEffect(() => {
@@ -27,15 +26,28 @@ export default function SupervisorComplaintsPage() {
     const fetchComplaints = async () => {
         setLoading(true);
         try {
-            const params = new URLSearchParams({
-                sort: filters.sort,
-                ...(filters.problemType && { problemType: filters.problemType }),
-                ...(filters.status && { status: filters.status })
-            });
+            const params = new URLSearchParams();
 
-            const response = await fetch(`/api/complaints/ward/${authState.wardNo}?${params}`);
+            // Add ward filter
+            params.append('ward_no', authState.wardNo);
+
+            // Add filters
+            if (filters.status) {
+                params.append('status', filters.status);
+            }
+            if (filters.problemType) {
+                params.append('problem_type', filters.problemType);
+            }
+
+            const url = `${process.env.NEXT_PUBLIC_API_URL}/api/complaints?${params.toString()}`;
+            const response = await fetch(url);
             const data = await response.json();
-            setComplaints(data.complaints || []);
+
+            if (data.success) {
+                setComplaints(data.data || []);
+            } else {
+                throw new Error(data.error || 'Failed to fetch complaints');
+            }
         } catch (error) {
             console.error('Failed to fetch complaints:', error);
             setComplaints([]);
@@ -55,10 +67,38 @@ export default function SupervisorComplaintsPage() {
 
     const statuses = ['Pending', 'In Progress', 'Resolved'];
 
-    const sortOptions = [
-        { value: 'newest', label: 'Newest First' },
-        { value: 'oldest', label: 'Oldest First' }
-    ];
+    const handleViewReport = (pdfUrl) => {
+        if (pdfUrl) {
+            window.open(pdfUrl, '_blank');
+        } else {
+            alert('Report not available.');
+        }
+    };
+
+    const handleVerifyComplaint = async (summaryId, isVerified) => {
+        if (!confirm('Are you sure you want to verify this resolution?')) return;
+
+        try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/supervisor-verify`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ summary_id: summaryId, verified: isVerified })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('Verification status updated!');
+                // Refresh list
+                fetchComplaints();
+            } else {
+                alert(`Error: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Verification failed:', error);
+            alert('Failed to update verification status.');
+        }
+    };
 
     return (
         <main className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-slate-50">
@@ -71,8 +111,8 @@ export default function SupervisorComplaintsPage() {
                 </div>
 
                 <div className="bg-white rounded-xl shadow-lg border border-green-200 p-6 mb-8">
-                    <h2 className="text-lg font-semibold text-slate-900 mb-4">Filter & Sort</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <h2 className="text-lg font-semibold text-slate-900 mb-4">Filter Complaints</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Problem Type</label>
                             <select
@@ -100,24 +140,11 @@ export default function SupervisorComplaintsPage() {
                                 ))}
                             </select>
                         </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Sort By</label>
-                            <select
-                                value={filters.sort}
-                                onChange={(e) => setFilters(prev => ({ ...prev, sort: e.target.value }))}
-                                className="w-full px-4 py-2 border border-green-200 rounded-lg text-slate-900 focus:outline-none focus:ring-2 focus:ring-green-900 focus:border-transparent"
-                            >
-                                {sortOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>{option.label}</option>
-                                ))}
-                            </select>
-                        </div>
                     </div>
 
                     {(filters.problemType || filters.status) && (
                         <button
-                            onClick={() => setFilters({ problemType: '', status: '', sort: 'newest' })}
+                            onClick={() => setFilters({ problemType: '', status: '' })}
                             className="mt-4 px-4 py-2 text-sm font-medium text-green-900 hover:text-green-800 underline"
                         >
                             Clear Filters
@@ -142,6 +169,8 @@ export default function SupervisorComplaintsPage() {
                                 key={complaint.id}
                                 complaint={complaint}
                                 userRole="supervisor"
+                                onStatusUpdate={handleVerifyComplaint} // Reusing prop for verification action
+                                onReportDownload={handleViewReport}   // Reusing prop for viewing report
                             />
                         ))}
                     </div>

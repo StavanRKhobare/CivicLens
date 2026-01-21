@@ -26,6 +26,7 @@ export default function Navbar() {
             return [
                 { label: 'Home', href: '/' },
                 { label: 'View Complaints', href: '/complaints' },
+                { label: 'My Complaints', href: '/my-complaints' },
                 { label: 'Post Complaint', href: '/post-complaint' },
                 { label: 'About', href: '/about' }
             ];

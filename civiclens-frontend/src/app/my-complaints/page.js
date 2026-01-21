@@ -1,9 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
 import ComplaintCard from '../components/complaintcard/ComplaintCard';
 
-export default function ComplaintsPage() {
+export default function MyComplaintsPage() {
+    const { authState } = useAuth();
+    const router = useRouter();
     const [complaints, setComplaints] = useState([]);
     const [loading, setLoading] = useState(false);
     const [filters, setFilters] = useState({
@@ -14,26 +18,24 @@ export default function ComplaintsPage() {
     const [page, setPage] = useState(1);
 
     useEffect(() => {
+        // Redirect to login if not authenticated
+        if (!authState.isAuthenticated) {
+            router.push('/login');
+            return;
+        }
         fetchComplaints();
-    }, [filters, page]);
+    }, [authState, filters, page]);
 
     const fetchComplaints = async () => {
         setLoading(true);
         try {
-            const params = new URLSearchParams();
-
-            // Add filters
-            if (filters.ward) {
-                params.append('ward_no', filters.ward);
-            }
-            if (filters.problemType) {
-                params.append('problem_type', filters.problemType);
-            }
-            if (filters.status) {
-                params.append('status', filters.status);
+            if (!authState.username) {
+                setComplaints([]);
+                setLoading(false);
+                return;
             }
 
-            const url = `${process.env.NEXT_PUBLIC_API_URL}/api/complaints${params.toString() ? '?' + params.toString() : ''}`;
+            const url = `${process.env.NEXT_PUBLIC_API_URL}/api/my-complaints?user_id=${authState.username}`;
             const response = await fetch(url);
             const data = await response.json();
 
@@ -49,6 +51,7 @@ export default function ComplaintsPage() {
             setLoading(false);
         }
     };
+
 
     const handleFilterChange = (filterName, value) => {
         setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -70,8 +73,8 @@ export default function ComplaintsPage() {
         <main className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-slate-50">
             <div className="max-w-7xl mx-auto px-6 py-12">
                 <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">All Complaints</h1>
-                    <p className="text-slate-600">Complete transparency - View all civic issues across Bangalore</p>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">My Complaints</h1>
+                    <p className="text-slate-600">Track the status of all complaints you've submitted</p>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-lg border border-green-200 p-6 mb-8">
@@ -134,12 +137,12 @@ export default function ComplaintsPage() {
                 {loading ? (
                     <div className="text-center py-12">
                         <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-green-900 border-t-transparent"></div>
-                        <p className="mt-4 text-slate-600">Loading complaints...</p>
+                        <p className="mt-4 text-slate-600">Loading your complaints...</p>
                     </div>
                 ) : complaints.length === 0 ? (
                     <div className="text-center py-12 bg-white rounded-xl shadow-lg border border-slate-200">
-                        <p className="text-lg text-slate-600">No complaints found matching your filters.</p>
-                        <p className="text-sm text-slate-500 mt-2">Try adjusting your filter criteria.</p>
+                        <p className="text-lg text-slate-600">You haven't submitted any complaints yet.</p>
+                        <p className="text-sm text-slate-500 mt-2">Visit the "Post Complaint" page to submit your first civic issue.</p>
                     </div>
                 ) : (
                     <>

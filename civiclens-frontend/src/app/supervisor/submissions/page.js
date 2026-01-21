@@ -28,7 +28,7 @@ export default function SupervisorSubmissionsPage() {
                 ...(filter && { verified: filter })
             });
 
-            const response = await fetch(`/api/reports/submissions?ward=${authState.wardNo}&${params}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reports/submissions?ward=${authState.wardNo}&${params}`);
             const data = await response.json();
             setSubmissions(data.submissions || []);
         } catch (error) {
@@ -39,12 +39,12 @@ export default function SupervisorSubmissionsPage() {
         }
     };
 
-    const handleVerification = async (reportId, verified) => {
+    const handleVerification = async (summaryId, verified) => { // Changed reportId to summaryId
         try {
-            const response = await fetch(`/api/reports/${reportId}/verify`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/supervisor-verify`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ verified })
+                body: JSON.stringify({ summary_id: summaryId, verified }) // Using correct backend payload
             });
 
             if (response.ok) {
@@ -169,12 +169,20 @@ export default function SupervisorSubmissionsPage() {
 
                                     <div className="flex gap-3 pt-4 border-t border-slate-200">
                                         <button
+                                            onClick={() => window.open(submission.pdf_url, '_blank')}
+                                            disabled={!submission.pdf_url}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-slate-700 border-2 border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
+                                        >
+                                            <FileText className="w-4 h-4" />
+                                            View Report
+                                        </button>
+                                        <button
                                             onClick={() => handleVerification(submission.id, true)}
                                             disabled={submission.verified}
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-900 text-white rounded-lg hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
                                         >
                                             <CheckCircle className="w-4 h-4" />
-                                            Mark as Verified
+                                            Mark Verified
                                         </button>
                                         <button
                                             onClick={() => handleVerification(submission.id, false)}
@@ -182,7 +190,7 @@ export default function SupervisorSubmissionsPage() {
                                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-red-600 border-2 border-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-colors"
                                         >
                                             <XCircle className="w-4 h-4" />
-                                            Mark as Unverified
+                                            Unverify
                                         </button>
                                     </div>
                                 </div>

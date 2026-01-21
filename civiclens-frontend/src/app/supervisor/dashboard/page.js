@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -8,9 +8,37 @@ export default function SupervisorDashboard() {
     const { authState } = useAuth();
     const router = useRouter();
 
+    const [stats, setStats] = useState({
+        total_submissions: 0,
+        pending_review: 0,
+        verified: 0
+    });
+    const [isLoading, setIsLoading] = useState(true);
+
     useEffect(() => {
         if (!authState.isAuthenticated || authState.userType !== 'supervisor') {
             router.push('/login');
+            return;
+        }
+
+        const fetchStats = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analytics?ward_no=${authState.wardNo}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data.supervisor) {
+                        setStats(data.data.supervisor);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to fetch analytics:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (authState.wardNo) {
+            fetchStats();
         }
     }, [authState, router]);
 
@@ -31,34 +59,46 @@ export default function SupervisorDashboard() {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="relative bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-6 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-700 via-purple-600 to-purple-700"></div>
-                        <div className="text-purple-900 text-sm font-medium mb-1">Total Submissions</div>
-                        <div className="text-3xl font-bold text-purple-900">0</div>
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
                     </div>
-                    <div className="relative bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-6 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700"></div>
-                        <div className="text-amber-900 text-sm font-medium mb-1">Pending Review</div>
-                        <div className="text-3xl font-bold text-amber-900">0</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div className="relative bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-2xl p-6 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-700 via-purple-600 to-purple-700"></div>
+                            <div className="text-purple-900 text-sm font-medium mb-1">Total Submissions</div>
+                            <div className="text-3xl font-bold text-purple-900">{stats.total_submissions}</div>
+                        </div>
+                        <div className="relative bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 rounded-2xl p-6 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700"></div>
+                            <div className="text-amber-900 text-sm font-medium mb-1">Pending Review</div>
+                            <div className="text-3xl font-bold text-amber-900">{stats.pending_review}</div>
+                        </div>
+                        <div className="relative bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-6 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
+                            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-700 via-green-600 to-green-700"></div>
+                            <div className="text-green-900 text-sm font-medium mb-1">Verified</div>
+                            <div className="text-3xl font-bold text-green-900">{stats.verified}</div>
+                        </div>
                     </div>
-                    <div className="relative bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-2xl p-6 shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105">
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-700 via-green-600 to-green-700"></div>
-                        <div className="text-green-900 text-sm font-medium mb-1">Verified</div>
-                        <div className="text-3xl font-bold text-green-900">0</div>
-                    </div>
-                </div>
+                )}
 
                 <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl mb-8">
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-green-900 via-green-800 to-green-900"></div>
                     <div className="p-8">
                         <h2 className="text-xl font-semibold text-slate-900 mb-4">Quick Actions</h2>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <button className="px-6 py-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition text-left">
+                            <button
+                                onClick={() => router.push('/supervisor/complaints')}
+                                className="px-6 py-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition text-left"
+                            >
                                 <div className="font-medium text-slate-900">View Complaints</div>
                                 <div className="text-sm text-slate-600 mt-1">Read-only ward complaints</div>
                             </button>
-                            <button className="px-6 py-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition text-left">
+                            <button
+                                onClick={() => router.push('/supervisor/complaints')}
+                                className="px-6 py-4 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition text-left"
+                            >
                                 <div className="font-medium text-slate-900">Review Submissions</div>
                                 <div className="text-sm text-slate-600 mt-1">Verify PDF submissions</div>
                             </button>
@@ -84,7 +124,7 @@ export default function SupervisorDashboard() {
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600"></div>
                     <div className="p-4">
                         <p className="text-sm text-blue-900">
-                            <strong>Note:</strong> This is a demonstration dashboard. Full verification features will be implemented in the next phase.
+                            <strong>Note:</strong> Dashboard now showing real-time data from the backend.
                         </p>
                     </div>
                 </div>

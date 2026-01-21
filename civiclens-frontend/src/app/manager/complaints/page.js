@@ -12,28 +12,45 @@ export default function ManagerComplaintsPage() {
     const [loading, setLoading] = useState(false);
     const [filters, setFilters] = useState({
         status: '',
-        sort: 'oldest_unresolved'
+        sort: 'newest'
     });
 
-    // useEffect(() => {
-    //     if (!authState.isAuthenticated || authState.userType !== 'manager') {
-    //         router.push('/login');
-    //         return;
-    //     }
-    //     fetchComplaints();
-    // }, [authState, filters]);
+    useEffect(() => {
+        if (!authState.isAuthenticated || authState.userType !== 'manager') {
+            router.push('/login');
+            return;
+        }
+        fetchComplaints();
+    }, [authState, filters]);
 
     const fetchComplaints = async () => {
         setLoading(true);
         try {
-            const params = new URLSearchParams({
-                sort: filters.sort,
-                ...(filters.status && { status: filters.status })
-            });
+            const params = new URLSearchParams();
 
-            const response = await fetch(`/api/complaints/ward/${authState.wardNo}?${params}`);
+            // Add ward filter
+            params.append('ward_no', authState.wardNo);
+
+            // Add sort
+            params.append('sort', filters.sort);
+
+            // Add quantity for manager dashboard (fetch all)
+            // No pagination needed as per requirements
+
+            // Add status filter if selected
+            if (filters.status) {
+                params.append('status', filters.status);
+            }
+
+            const url = `${process.env.NEXT_PUBLIC_API_URL}/api/complaints?${params.toString()}`;
+            const response = await fetch(url);
             const data = await response.json();
-            setComplaints(data.complaints || []);
+
+            if (data.success) {
+                setComplaints(data.data || []);
+            } else {
+                throw new Error(data.error || 'Failed to fetch complaints');
+            }
         } catch (error) {
             console.error('Failed to fetch complaints:', error);
             setComplaints([]);
@@ -42,25 +59,30 @@ export default function ManagerComplaintsPage() {
         }
     };
 
-    const handleStatusUpdate = async (complaintId, newStatus) => {
+    const handleStatusUpdate = async (complaintId, newStatus, remarks = '') => {
         try {
-            const response = await fetch(`/api/complaints/${complaintId}/status`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/complaints/${complaintId}/status`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus })
+                body: JSON.stringify({ status: newStatus, remarks: remarks })
             });
 
             if (response.ok) {
                 fetchComplaints();
+            } else {
+                const data = await response.json();
+                console.error('Server returned error:', data);
+                alert(`Failed to update status: ${data.error || 'Unknown server error'}`);
             }
         } catch (error) {
-            console.error('Failed to update status:', error);
+            console.error('Failed to update status (Network/Client Error):', error);
+            alert(`An error occurred: ${error.message}`);
         }
     };
 
     const handleReportDownload = async (complaintId) => {
         try {
-            const response = await fetch(`/api/reports/download/${complaintId}`);
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reports/download/${complaintId}`);
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -74,23 +96,38 @@ export default function ManagerComplaintsPage() {
 
     const handleReportSubmit = async (complaintId) => {
         try {
-            const response = await fetch('/api/reports/submit', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reports/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ complaintId })
             });
 
+            const text = await response.text();
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (e) {
+                console.error('Failed to parse response JSON:', text);
+                throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}...`);
+            }
+
             if (response.ok) {
-                alert('Report submitted to supervisor successfully!');
+                alert('Official Resolution Report generated and submitted successfully!');
+                fetchComplaints(); // Refresh to update PDF status in UI
+            } else {
+                console.error('Server returned error:', data);
+                alert(`Failed to submit report: ${data.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Failed to submit report:', error);
+            alert(`An unexpected error occurred: ${error.message}`);
         }
     };
 
+
+
     const statuses = ['Pending', 'In Progress', 'Resolved'];
     const sortOptions = [
-        { value: 'oldest_unresolved', label: 'Oldest Unresolved First' },
         { value: 'newest', label: 'Newest First' },
         { value: 'oldest', label: 'Oldest First' }
     ];
