@@ -1,4 +1,25 @@
+'use client';
+
+import { useRef } from 'react';
+import { User, Briefcase, ShieldCheck } from 'lucide-react';
+
 export default function HomePage() {
+    const videoRef = useRef(null);
+
+    // Timestamp configuration (in seconds)
+    const timestamps = {
+        public: 0,      // Start from beginning
+        manager: 49,    // Manager demo starts at 0:49
+        supervisor: 134 // Supervisor demo starts at 2:14 (2*60 + 14)
+    };
+
+    const handleTimestampClick = (timestamp) => {
+        if (videoRef.current) {
+            videoRef.current.currentTime = timestamp;
+            videoRef.current.play();
+        }
+    };
+
     return (
         <main className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-slate-50">
             <section className="max-w-7xl mx-auto px-6 py-12">
@@ -28,17 +49,55 @@ export default function HomePage() {
                             </a>
                         </div>
                     </div>
-                    <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-200">
-                        <video
-                            className="w-full h-auto"
-                            controls
-                            autoPlay
-                            muted
-                            loop
-                        >
-                            <source src="/home_vid.mp4" type="video/mp4" />
-                            Your browser does not support the video tag.
-                        </video>
+                    <div className="space-y-4">
+                        <div className="rounded-2xl shadow-lg overflow-hidden border border-slate-200">
+                            <video
+                                ref={videoRef}
+                                className="w-full h-auto"
+                                controls
+                                autoPlay
+                                muted
+                                loop
+                            >
+                                <source src="/home_vid.mp4" type="video/mp4" />
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+
+                        {/* Timestamp Navigation Buttons */}
+                        <div className="bg-white rounded-xl shadow-md p-4 border border-slate-200">
+                            <h3 className="text-sm font-semibold text-slate-700 mb-3 text-center">
+                                Jump to Demo Section
+                            </h3>
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    onClick={() => handleTimestampClick(timestamps.public)}
+                                    className="flex flex-col items-center gap-2 p-3 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 rounded-lg transition-all duration-200 border border-blue-200 hover:border-blue-300 group"
+                                >
+                                    <User className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-medium text-blue-900">Public</span>
+                                    <span className="text-[10px] text-blue-600">0:00</span>
+                                </button>
+
+                                <button
+                                    onClick={() => handleTimestampClick(timestamps.manager)}
+                                    className="flex flex-col items-center gap-2 p-3 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 rounded-lg transition-all duration-200 border border-amber-200 hover:border-amber-300 group"
+                                >
+                                    <Briefcase className="w-5 h-5 text-amber-600 group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-medium text-amber-900">Manager</span>
+                                    <span className="text-[10px] text-amber-600">0:49</span>
+                                </button>
+
+                                <button
+                                    onClick={() => handleTimestampClick(timestamps.supervisor)}
+                                    className="flex flex-col items-center gap-2 p-3 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 rounded-lg transition-all duration-200 border border-green-200 hover:border-green-300 group"
+                                >
+                                    <ShieldCheck className="w-5 h-5 text-green-600 group-hover:scale-110 transition-transform" />
+                                    <span className="text-xs font-medium text-green-900">Supervisor</span>
+                                    <span className="text-[10px] text-green-600">2:14</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
