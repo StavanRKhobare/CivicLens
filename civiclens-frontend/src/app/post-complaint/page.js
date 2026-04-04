@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
-import { AlertCircle, CheckCircle2, Info, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Send, Upload, X } from 'lucide-react';
 
 export default function PostComplaintPage() {
     const { authState } = useAuth();
@@ -14,6 +14,7 @@ export default function PostComplaintPage() {
         city: 'Bangalore'
     });
 
+    const [images, setImages] = useState([]);
     const [charCount, setCharCount] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -32,6 +33,46 @@ export default function PostComplaintPage() {
         const text = e.target.value;
         setFormData({ ...formData, description: text });
         setCharCount(text.length);
+    };
+
+    const handleImageUpload = (e) => {
+        const files = Array.from(e.target.files);
+        if (images.length + files.length > 3) {
+            setError('You can only upload up to 3 images.');
+            return;
+        }
+
+        files.forEach(file => {
+            if (!file.type.startsWith('image/')) return;
+            
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    
+                    let scaleSize = 1;
+                    if (img.width > MAX_WIDTH) {
+                        scaleSize = MAX_WIDTH / img.width;
+                    }
+                    
+                    canvas.width = img.width * scaleSize;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    setImages(prev => [...prev, dataUrl]);
+                };
+            };
+        });
+    };
+
+    const removeImage = (index) => {
+        setImages(images.filter((_, i) => i !== index));
     };
 
     const handleSubmit = async () => {
@@ -53,7 +94,8 @@ export default function PostComplaintPage() {
                 },
                 body: JSON.stringify({
                     raw_text: formData.description.trim(),
-                    submitted_by: authState.username
+                    submitted_by: authState.username,
+                    images: images
                 })
             });
 
@@ -75,6 +117,7 @@ export default function PostComplaintPage() {
 
             // Reset form
             setFormData({ description: '', city: 'Bangalore' });
+            setImages([]);
             setCharCount(0);
 
             setSubmitSuccess(true);
@@ -224,6 +267,44 @@ export default function PostComplaintPage() {
                             <p className="text-xs text-slate-500 mt-2">
                                 Currently supporting Bangalore only
                             </p>
+                        </div>
+
+                        {/* Image Upload */}
+                        <div className="mb-8">
+                            <label className="block text-base font-semibold text-slate-900 mb-2">
+                                Attach Images (Optional)
+                            </label>
+                            <p className="text-sm text-slate-600 mb-3">
+                                Upload up to 3 images (will be compressed automatically).
+                            </p>
+                            
+                            <div className="flex flex-wrap gap-4 mb-4">
+                                {images.map((img, index) => (
+                                    <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-200">
+                                        <img src={img} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+                                        <button 
+                                            onClick={() => removeImage(index)}
+                                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                                
+                                {images.length < 3 && (
+                                    <label className="w-24 h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-green-600 hover:bg-green-50 transition-colors">
+                                        <Upload className="w-6 h-6 text-slate-400 mb-1" />
+                                        <span className="text-xs text-slate-500 font-medium">Add Image</span>
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            multiple 
+                                            className="hidden" 
+                                            onChange={handleImageUpload} 
+                                        />
+                                    </label>
+                                )}
+                            </div>
                         </div>
 
                         {/* Info Box */}

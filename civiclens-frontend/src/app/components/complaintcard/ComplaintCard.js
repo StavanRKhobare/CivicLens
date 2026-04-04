@@ -107,9 +107,20 @@ export default function ComplaintCard({
                     <h3 className="text-base font-semibold text-slate-900 mb-2">
                         {complaint.summary || 'No summary provided'}
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-slate-600 mb-3">
                         {complaint.address || 'No address provided'}
                     </p>
+                    
+                    {/* Render attached images if any */}
+                    {complaint.images && complaint.images.length > 0 && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 mt-2">
+                            {complaint.images.map((imgUrl, idx) => (
+                                <a key={idx} href={imgUrl} target="_blank" rel="noreferrer" className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-slate-200 hover:border-green-500 transition-colors">
+                                    <img src={imgUrl} alt={`Complaint Image ${idx + 1}`} className="w-full h-full object-cover" />
+                                </a>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 mb-4 p-4 bg-white/50 rounded-lg">

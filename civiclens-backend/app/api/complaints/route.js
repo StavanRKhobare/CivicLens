@@ -25,7 +25,7 @@ export async function POST(request) {
             );
         }
 
-        const { raw_text, submitted_by } = body;
+        const { raw_text, submitted_by, images } = body;
 
         if (!raw_text || typeof raw_text !== 'string') {
             return NextResponse.json(
@@ -75,11 +75,52 @@ export async function POST(request) {
             );
         }
 
+        // --- Image Upload Logic ---
+        let imageUrls = [];
+        if (images && Array.isArray(images) && images.length > 0) {
+            if (images.length > 3) {
+                return NextResponse.json({ success: false, error: 'Maximum 3 images allowed' }, { status: 400 });
+            }
+            
+            for (let i = 0; i < images.length; i++) {
+                try {
+                    const base64Str = images[i];
+                    // Ensure it is a data URL
+                    if (!base64Str.startsWith('data:image/')) continue;
+                    
+                    const base64Data = base64Str.replace(/^data:image\/\w+;base64,/, "");
+                    const buffer = Buffer.from(base64Data, 'base64');
+                    const fileName = `${submitted_by.trim()}_${Date.now()}_${i}.jpg`;
+                    
+                    const { error: uploadError } = await supabase.storage
+                        .from('complaint_images')
+                        .upload(fileName, buffer, {
+                            contentType: 'image/jpeg',
+                            upsert: false
+                        });
+                        
+                    if (uploadError) {
+                        console.error('Image upload failed:', uploadError);
+                        continue;
+                    }
+                    
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('complaint_images')
+                        .getPublicUrl(fileName);
+                        
+                    imageUrls.push(publicUrl);
+                } catch (imgError) {
+                    console.error('Failed to process image:', imgError);
+                }
+            }
+        }
+
         const { data, error } = await supabase
             .from('ComplaintTable')
             .insert({
                 raw_text: trimmedText,
-                submitted_by: submitted_by.trim()
+                submitted_by: submitted_by.trim(),
+                image_urls: imageUrls.length > 0 ? imageUrls : null
             })
             .select('id, created_at')
             .single();
@@ -90,6 +131,18 @@ export async function POST(request) {
                 { success: false, error: 'Internal Server Error: Failed to log complaint.' },
                 { status: 500 }
             );
+        }
+
+        // Trigger ML pipeline (fire-and-forget)
+        try {
+            const mlUrl = process.env.ML_PIPELINE_URL || 'http://localhost:8000';
+            fetch(`${mlUrl}/process`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ complaint_id: data.id, text: trimmedText })
+            }).catch(e => console.error('ML pipeline async trigger failed:', e));
+        } catch(e) {
+            console.error('Failed to trigger ML pipeline:', e);
         }
 
         return NextResponse.json(
@@ -199,7 +252,8 @@ export async function GET(request) {
             pdf_status: item.pdfStatus,
             pdf_path: item.pdfPath,
             supervisor_verified: item.supervisor_verified,
-            complaint_count: item.complaint_count
+            complaint_count: item.complaint_count,
+            images: item.image_urls || []
         }));
 
         return NextResponse.json({
