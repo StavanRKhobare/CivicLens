@@ -9,7 +9,7 @@ sys.path.insert(0, str(project_root))
 
 from src.database import supabase
 from src.config import config
-from src.models import load_distilbert_model
+from src.models import load_classification_model
 from src.geocoding import extract_address_gliner, geocode_address, find_ward
 
 logger = get_task_logger(__name__)
@@ -24,7 +24,7 @@ def get_classification_model():
     global _model, _tokenizer, _le_problem
     if _model is None:
         logger.info("Loading DistilBERT model...")
-        _model, _tokenizer, _le_problem = load_distilbert_model()
+        _model, _tokenizer, _le_problem = load_classification_model()
     return _model, _tokenizer, _le_problem
 
 def get_embedder():
